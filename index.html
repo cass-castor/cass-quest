@@ -1,0 +1,90 @@
+
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <title>CASS // QUEST_PORTAL</title>
+                <style>
+                    body { background: #050505; color: #e0e0e0; font-family: 'Courier New', Courier, monospace; padding: 20px; max-width: 1000px; margin: 0 auto; }
+                    h1 { color: #ff00ff; border-bottom: 2px solid #ff00ff; text-transform: uppercase; letter-spacing: 5px; text-align: center; }
+                    .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 30px; }
+                    .quest-card { background: #111; border: 1px solid #333; padding: 20px; border-radius: 8px; transition: border 0.3s; }
+                    .quest-card:hover { border-color: #ff00ff; }
+                    .quest-title { font-size: 1.5em; font-weight: bold; color: #ff00ff; display: block; margin-bottom: 5px; }
+                    .quest-genre { color: #888; font-size: 0.8em; text-transform: uppercase; }
+                    .quest-diff { color: #aaa; font-size: 0.8em; }
+                    .quest-desc { font-size: 0.9em; margin: 15px 0; color: #ccc; }
+                    button { background: #ff00ff; color: #000; border: none; padding: 10px 20px; font-family: inherit; font-weight: bold; cursor: pointer; width: 100%; }
+                </style>
+                </head>
+                <body>
+                    <h1>CASS // QUEST_PORTAL</h1>
+                    <div class="gallery">
+                        
+                <div class="quest-card">
+                    <span class="quest-title">Void Station</span><br>
+                    <span class="quest-genre">Sci-Fi Survival</span> | <span class="quest-diff">Medium</span>
+                    <p class="quest-desc">Wake up in a dying space station. Find the keycard, restore power, and escape before your oxygen runs out.</p>
+                    <button disabled>Coming Soon (Interactive Version)</button>
+                </div>
+                <div class="quest-card">
+                    <span class="quest-title">The Whispering Manor</span><br>
+                    <span class="quest-genre">Gothic Horror</span> | <span class="quest-diff">Easy</span>
+                    <p class="quest-desc">Navigate a haunted estate. Appease the spirits of the past to unlock the front door.</p>
+                    <button disabled>Coming Soon (Interactive Version)</button>
+                </div>
+                <div class="quest-card">
+                    <span class="quest-title">Neon Breach</span><br>
+                    <span class="quest-genre">Cyberpunk Heist</span> | <span class="quest-diff">Hard</span>
+                    <p class="quest-desc">Infiltrate a corporate vault in a rain-slicked city. Hack the security grid and steal the Data Core.</p>
+                    <button disabled>Coming Soon (Interactive Version)</button>
+                </div>
+                <div class="quest-card">
+                    <span class="quest-title">The Clockwork Labyrinth</span><br>
+                    <span class="quest-genre">Surrealist Puzzle</span> | <span class="quest-diff">Medium</span>
+                    <p class="quest-desc">Navigate a shifting world of brass and gears. Align the machinery to unlock the Golden Gate.</p>
+                    <button disabled>Coming Soon (Interactive Version)</button>
+                </div>
+                    </div>
+                    <div id="terminal-container" style="display:none;">
+                        <div id="close-btn" onclick="closeGame()">[X] CLOSE QUEST</div>
+                        <div id="terminal-output"></div>
+                        <div id="terminal-input-area">
+                        <span style="color: #00ff41;">&gt;&nbsp;</span><input type="text" id="terminal-input" autofocus onkeydown="handleInput(event)">
+                        </div>
+                    </div>
+                    <script>
+                        let session_id = null;
+                        async function startGame(scenario) {
+                            const res = await fetch(`/game/start/${scenario}`);
+                            const data = await res.json();
+                            session_id = data.session_id;
+                            document.getElementById('terminal-container').style.display = 'block';
+                            document.getElementById('terminal-output').innerHTML = data.message.replace(/\\n/g, '<br>');
+                            document.getElementById('terminal-input').focus();
+                        }
+                        function closeGame() {
+                            document.getElementById('terminal-container').style.display = 'none';
+                        }
+                        async function handleInput(e) {
+                            if (e.key === 'Enter') {
+                                const input = document.getElementById('terminal-input');
+                                const cmd = input.value;
+                                if (!cmd) return;
+                                const output = document.getElementById('terminal-output');
+                                output.innerHTML += `<br><span style="color: #888;">&gt; ${cmd}</span><br>`;
+                                input.value = '';
+                                const res = await fetch('/game/input', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({ command: cmd, session_id: session_id })
+                                });
+                                const data = await res.json();
+                                output.innerHTML += data.message.replace(/\\n/g, '<br>');
+                                output.scrollTop = output.scrollHeight;
+                            }
+                        }
+                    </script>
+                </body>
+                </html>
+                
