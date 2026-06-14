@@ -1,0 +1,91 @@
+{
+  "game_name": "The Clockwork Labyrinth",
+  "start_room": "center",
+  "initial_oxygen": 999,
+  "world_state": {
+    "gears_aligned": false,
+    "key_found": false,
+    "labyrinth_solved": false
+  },
+  "rooms": {
+    "center": {
+      "name": "The Great Gear",
+      "description": "You stand atop a massive, slowly rotating brass gear. In every direction, the world is a dizzying array of clockwork mechanisms. To the north is a golden gate, and to the south is a descending spiral.",
+      "art": "\n            _______\n           /       \\\n          |   (O)   |\n           \\_______/\n           ( TICK )\n    ",
+      "exits": {
+        "north": "gate",
+        "south": "spiral"
+      },
+      "items": []
+    },
+    "spiral": {
+      "name": "Descending Spiral",
+      "description": "A winding staircase of copper plates. The sound of a thousand ticking clocks echoes from below. A small silver key glints in a crack in the wall.",
+      "art": "\n             @@@@@\n            @     @\n            @  @   @\n            @  @   @\n            ",
+      "exits": {
+        "north": "center"
+      },
+      "items": [
+        "silver_key"
+      ]
+    },
+    "gate": {
+      "name": "The Golden Gate",
+      "description": "A towering gate of gold and ivory. It has no handle, only a complex series of interlocking slots. To the east is a room of mirrors.",
+      "art": "\n            |  ___  |\n            | |   | |\n            | |___| |\n            |_______|\n            ",
+      "exits": {
+        "south": "center",
+        "east": "mirrors"
+      },
+      "items": []
+    },
+    "mirrors": {
+      "name": "The Mirror Gallery",
+      "description": "Infinite reflections of yourself stretch into the distance. In the center of the room is a singular, massive lever that seems to control the rotation of the world.",
+      "art": "\n            | | | | |\n            | | | | |\n            | | | | |\n            |_________|\n            ",
+      "exits": {
+        "west": "gate"
+      },
+      "items": [
+        "lever"
+      ]
+    }
+  },
+  "items": {
+    "silver_key": {
+      "name": "Silver Key",
+      "description": "A key that feels like it's vibrating in sync with the world.",
+      "takeable": true
+    },
+    "lever": {
+      "name": "Lever",
+      "description": "A heavy iron lever. Pulling it feels like shifting the axis of reality.",
+      "takeable": false
+    }
+  },
+  "interactions": [
+    {
+      "item": "lever",
+      "action": "use",
+      "room": "mirrors",
+      "set_flag": {
+        "gears_aligned": true
+      },
+      "message": "You pull the lever. A deafening grinding sound fills the air as the entire labyrinth shifts. You hear a satisfying 'CLICK' from the north."
+    },
+    {
+      "item": "silver_key",
+      "action": "use",
+      "room": "gate",
+      "required_flag": "gears_aligned",
+      "win_game": true,
+      "message": "You insert the silver key into the now-aligned slots. The Golden Gate swings open, revealing a blinding white light. YOU HAVE ESCAPED THE CLOCKWORK!"
+    },
+    {
+      "item": "silver_key",
+      "action": "use",
+      "room": "gate",
+      "message": "The key doesn't fit. The slots are misaligned. You need to change the rotation of the labyrinth first."
+    }
+  ]
+}

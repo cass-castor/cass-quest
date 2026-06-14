@@ -1,0 +1,99 @@
+{
+  "game_name": "Neon Breach",
+  "start_room": "alley",
+  "initial_oxygen": 999,
+  "world_state": {
+    "security_down": false,
+    "core_extracted": false,
+    "hacked_terminal": false
+  },
+  "rooms": {
+    "alley": {
+      "name": "Rain-Slicked Alley",
+      "description": "The neon signs of the city blur in the rain. A high-security ventilation shaft is the only way in.",
+      "art": "\n      _______\n     |  ___  |\n     | |   | |\n     | |___| |\n     |_______|\n     ( SLUMS )\n    ",
+      "exits": {
+        "north": "vent_shaft"
+      },
+      "items": [
+        "deck"
+      ]
+    },
+    "vent_shaft": {
+      "name": "Ventilation Shaft",
+      "description": "Cramped and metallic. You can hear the hum of servers nearby. The shaft leads further in or back to the alley.",
+      "art": "\n    ___________\n    |  _______  |\n    | |       | |\n    | |_______| |\n    |___________|\n    ",
+      "exits": {
+        "south": "alley",
+        "north": "server_room"
+      },
+      "items": []
+    },
+    "server_room": {
+      "name": "Central Server Room",
+      "description": "Columns of blinking blue lights stretch into the darkness. A master terminal controls the security grid.",
+      "art": "\n     | | | | | |\n     | | | | | |\n     | | | | | |\n     |_________|\n    ",
+      "exits": {
+        "south": "vent_shaft",
+        "east": "vault"
+      },
+      "items": [
+        "terminal"
+      ]
+    },
+    "vault": {
+      "name": "The Data Vault",
+      "description": "A sterile, white room. In the center sits the Data Core, protected by a laser grid.",
+      "art": "\n      _________\n     /         \\\n    |   ( O )   |\n     \\_________/\n    ",
+      "exits": {
+        "west": "server_room"
+      },
+      "items": [
+        "data_core"
+      ]
+    }
+  },
+  "items": {
+    "deck": {
+      "name": "Deck",
+      "description": "A modified hacking deck. Essential for bypassing security.",
+      "takeable": true
+    },
+    "terminal": {
+      "name": "Terminal",
+      "description": "A high-level security terminal.",
+      "takeable": false
+    },
+    "data_core": {
+      "name": "Data Core",
+      "description": "The target. A glowing cylinder containing the corporation's darkest secrets.",
+      "takeable": true
+    }
+  },
+  "interactions": [
+    {
+      "item": "deck",
+      "action": "use",
+      "room": "server_room",
+      "set_flag": {
+        "security_down": true,
+        "hacked_terminal": true
+      },
+      "message": "You jack into the terminal. After a frantic sequence of commands, the laser grids in the vault hiss and power down. SECURITY DISABLED."
+    },
+    {
+      "item": "data_core",
+      "action": "use",
+      "room": "vault",
+      "required_flag": "security_down",
+      "win_game": true,
+      "message": "You carefully extract the Data Core. With the security down, you slip back out through the vents and vanish into the neon rain. MISSION ACCOMPLISHED!"
+    },
+    {
+      "item": "data_core",
+      "action": "use",
+      "room": "vault",
+      "message": "You try to grab the core, but the laser grid incinerates your hand! You barely escape back to the server room."
+    }
+  ]
+}

@@ -1,0 +1,112 @@
+{
+  "game_name": "The Whispering Manor",
+  "start_room": "foyer",
+  "initial_oxygen": 999,
+  "world_state": {
+    "ghost_appeased": false,
+    "door_unlocked": false
+  },
+  "rooms": {
+    "foyer": {
+      "name": "Dusty Foyer",
+      "description": "A grand entrance with a sweeping staircase. A heavy oak door leads north, and a cold breeze blows from the west.",
+      "art": "\n       _________\n      |   ___   |\n      |  |   |  |\n      |  |___|  |\n      |_________|\n      ( WELCOME )\n    ",
+      "exits": {
+        "north": "hall",
+        "west": "library"
+      },
+      "items": []
+    },
+    "hall": {
+      "name": "Grand Hall",
+      "description": "A long hallway lined with portraits whose eyes seem to follow you. The air is thick with the smell of old parchment.",
+      "art": "\n    ___________\n    | O     O |\n    |    ^    |\n    |  \\___/  |\n    |___________|\n    ",
+      "exits": {
+        "south": "foyer",
+        "east": "bedroom"
+      },
+      "items": [
+        "silver_key"
+      ]
+    },
+    "library": {
+      "name": "Forgotten Library",
+      "description": "Thousands of books rot on the shelves. A single candle flickers on a desk.",
+      "art": "\n    |||||||||||\n    |||||||||||\n    |||||||||||\n    ",
+      "exits": {
+        "east": "foyer"
+      },
+      "items": [
+        "ancient_tome"
+      ]
+    },
+    "bedroom": {
+      "name": "Master Bedroom",
+      "description": "A decayed four-poster bed dominates the room. A ghostly figure hovers near the window, weeping.",
+      "art": "\n     _________\n    |  _   _  |\n    | | | | | |\n    | |_| |_| |\n    |_________|\n    ",
+      "exits": {
+        "west": "hall"
+      },
+      "items": [
+        "locket"
+      ]
+    }
+  },
+  "items": {
+    "silver_key": {
+      "name": "Silver Key",
+      "description": "An ornate key that feels ice-cold to the touch.",
+      "takeable": true
+    },
+    "ancient_tome": {
+      "name": "Ancient Tome",
+      "description": "A book of rituals. One page describes how to appease a grieving spirit.",
+      "takeable": true
+    },
+    "locket": {
+      "name": "Golden Locket",
+      "description": "A small locket containing a faded photograph of a family.",
+      "takeable": true
+    }
+  },
+  "interactions": [
+    {
+      "item": "ancient_tome",
+      "action": "use",
+      "set_flag": {
+        "knows_ritual": true
+      },
+      "message": "You read the tome. You learn that giving a lost loved one's memento to a ghost can bring them peace."
+    },
+    {
+      "item": "locket",
+      "action": "use",
+      "room": "bedroom",
+      "required_flag": "knows_ritual",
+      "set_flag": {
+        "ghost_appeased": true
+      },
+      "message": "You hold out the locket. The ghost stops weeping, takes the locket with a spectral touch, and vanishes with a sigh of relief. The room feels warmer."
+    },
+    {
+      "item": "locket",
+      "action": "use",
+      "room": "bedroom",
+      "message": "The ghost shrieks and pushes you back! You don't know how to use this item properly."
+    },
+    {
+      "item": "silver_key",
+      "action": "use",
+      "room": "foyer",
+      "required_flag": "ghost_appeased",
+      "win_game": true,
+      "message": "With the ghost gone, the silver key finally turns in the lock of the front door. You step out into the moonlight. YOU ESCAPED THE MANOR!"
+    },
+    {
+      "item": "silver_key",
+      "action": "use",
+      "room": "foyer",
+      "message": "The key turns, but an invisible force slams the door shut. Something in this house is still unhappy."
+    }
+  ]
+}

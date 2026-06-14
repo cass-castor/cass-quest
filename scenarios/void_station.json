@@ -1,0 +1,115 @@
+{
+  "game_name": "Void Station",
+  "start_room": "cryo",
+  "initial_oxygen": 20,
+  "world_state": {
+    "power_on": false
+  },
+  "rooms": {
+    "cryo": {
+      "name": "Cryo-Chamber",
+      "description": "You wake up in a cold, dim room. Frost covers the walls. A faint humming sound vibrates through the floor.",
+      "art": "\n       _________\n      |         |\n      |  [###]  |\n      |  [###]  |\n      |_________|\n      ( COLD SLEEP )\n    ",
+      "exits": {
+        "north": "hallway"
+      },
+      "items": []
+    },
+    "hallway": {
+      "name": "Hallway",
+      "description": "A long, sterile corridor. The lights flicker overhead, casting long, dancing shadows.",
+      "art": "\n    ___________________\n    |  _           _  |\n    | | |         | | |\n    | |_|         |_| |\n    |_________________|\n    ",
+      "exits": {
+        "south": "cryo",
+        "north": "bridge",
+        "east": "engineering",
+        "west": "medbay"
+      },
+      "items": []
+    },
+    "bridge": {
+      "name": "Bridge",
+      "description": "The command center of the station. A massive viewport shows the swirling nebula outside. A computer console sits at the center.",
+      "art": "\n     _________________\n    /                 \\\n    |   *    .    *    |\n    |  .    (O)    .   |\n    |   *    .    *    |\n    \\_________________/\n    ",
+      "exits": {
+        "south": "hallway"
+      },
+      "items": [
+        "keycard",
+        "console"
+      ]
+    },
+    "engineering": {
+      "name": "Engineering",
+      "description": "The heart of the ship. Huge pistons hiss and steam leaks from pipes. A large power lever stands in the center.",
+      "art": "\n     ___     ___\n    |   |   |   |\n    | o |---| o |\n    |___|   |___|\n    ( HUMMING LOUDLY )\n    ",
+      "exits": {
+        "west": "hallway"
+      },
+      "items": [
+        "lever"
+      ]
+    },
+    "medbay": {
+      "name": "Medbay",
+      "description": "A clean, white room with several empty surgical beds. The air smells of ozone and antiseptic.",
+      "art": "\n      _______\n     |  ___  |\n     | |   | |\n     | |___| |\n     |_______|\n    ",
+      "exits": {
+        "east": "hallway"
+      },
+      "items": [
+        "o2_tank"
+      ]
+    }
+  },
+  "items": {
+    "keycard": {
+      "name": "Keycard",
+      "description": "An electronic keycard with 'COMMAND' printed on it.",
+      "takeable": true
+    },
+    "console": {
+      "name": "Console",
+      "description": "A flickering computer console.",
+      "takeable": false
+    },
+    "lever": {
+      "name": "Lever",
+      "description": "A large industrial power lever.",
+      "takeable": false
+    },
+    "o2_tank": {
+      "name": "O2-Tank",
+      "description": "A small emergency oxygen canister.",
+      "takeable": true
+    }
+  },
+  "interactions": [
+    {
+      "room": "engineering",
+      "item": "lever",
+      "action": "use",
+      "set_flag": {
+        "power_on": true
+      },
+      "message": "\\n*CLUNK*\\nYou pull the lever. Lights flicker across the station as power is restored!"
+    },
+    {
+      "room": "bridge",
+      "item": "keycard",
+      "action": "use",
+      "required_flag": "power_on",
+      "win_game": true,
+      "message": "\\n*** SUCCESS! ***\\nYou swipe the keycard through the powered console. The escape pod activates with a loud hiss!\\nYou've escaped the Void Station. YOU WIN!"
+    },
+    {
+      "item": "o2_tank",
+      "action": "use",
+      "effect": "restore_oxygen",
+      "amount": 10,
+      "message": "You use the O2-Tank. You feel a rush of fresh air. (+10 Oxygen)",
+      "consume_item": true
+    }
+  ],
+  "intro": "You are the sole survivor of a disaster. Your goal is to reactivate the escape pod.\nWarning: Your suit oxygen is limited. Every move counts."
+}
