@@ -9,7 +9,7 @@ async function startGame(scenarioId) {
     inputArea.style.display = 'none';
 
     try {
-        const response = await fetch(`/scenarios/${scenarioId}.json`);
+        const response = await fetch(`scenarios/${scenarioId}.json`);
         if (!response.ok) throw new Error("Scenario not found");
         const data = await response.json();
         
