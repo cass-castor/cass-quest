@@ -8,7 +8,6 @@ async function startGame(scenarioId) {
     container.style.display = 'flex';
     inputArea.style.display = 'none';
 
-    // FIX: Strip .json from scenarioId if it exists to avoid .json.json
     const cleanId = scenarioId.replace(/\.json$/, '');
     
     try {
@@ -55,11 +54,17 @@ async function handleInput(e) {
         output.innerHTML += `<br><span style="color: #888;">&gt; ${cmdText}</span><br>`;
         inputField.value = '';
 
-        if (!window.currentGame) return;
+        if (!window.currentGame) {
+            output.innerHTML += "Error: No game session active.<br>";
+            return;
+        }
+
         const { world, player } = window.currentGame;
-        const parts = cmdText.split();
+        const parts = cmdText.split(/\s+/); // Split by any whitespace
         const action = parts[0];
         const args = parts.slice(1);
+
+        console.log(`Action: "${action}", Args:`, args);
 
         let message = "";
 
@@ -72,7 +77,7 @@ async function handleInput(e) {
             output.innerHTML += message + "<br>";
             return;
         } else if (action === "look") {
-            // handled by updateDisplay
+            message = "You look around... ";
         } else if (action === "inventory") {
             if (player.inventory.length === 0) {
                 message = "Your inventory is empty.";
@@ -141,10 +146,13 @@ async function handleInput(e) {
                 }
             }
         } else {
-            message = "I don't understand that command.";
+            message = `I don't understand the command '${action}'. Try typing 'help'.`;
         }
 
-        output.innerHTML += message + "<br>";
+        if (message) {
+            output.innerHTML += message + "<br>";
+        }
+        
         if (window.currentGame) {
             updateDisplay();
         }
