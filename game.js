@@ -5,12 +5,15 @@ async function startGame(scenarioId) {
     const container = document.getElementById('terminal-container');
     
     output.innerHTML = "Loading scenario...";
-    container.style.display = 'block';
+    container.style.display = 'flex';
     inputArea.style.display = 'none';
 
+    // FIX: Strip .json from scenarioId if it exists to avoid .json.json
+    const cleanId = scenarioId.replace(/\.json$/, '');
+    
     try {
-        const response = await fetch(`scenarios/${scenarioId}.json`);
-        if (!response.ok) throw new Error("Scenario not found");
+        const response = await fetch(`scenarios/${cleanId}.json`);
+        if (!response.ok) throw new Error(`Scenario ${cleanId} not found (Status: ${response.status})`);
         const data = await response.json();
         
         const world = new World(data);
@@ -21,15 +24,17 @@ async function startGame(scenarioId) {
         output.innerHTML = `Welcome to '${world.gameName}'!<br>${data.intro || "Welcome to the adventure!"}<br>Type 'help' for commands.<br>`;
         
         updateDisplay();
-        inputArea.style.display = 'block';
+        inputArea.style.display = 'flex';
         document.getElementById('terminal-input').focus();
         
     } catch (e) {
+        console.error(e);
         output.innerHTML = `Error loading scenario: ${e.message}`;
     }
 }
 
 function updateDisplay() {
+    if (!window.currentGame) return;
     const { world, player } = window.currentGame;
     const output = document.getElementById('terminal-output');
     
@@ -50,6 +55,7 @@ async function handleInput(e) {
         output.innerHTML += `<br><span style="color: #888;">&gt; ${cmdText}</span><br>`;
         inputField.value = '';
 
+        if (!window.currentGame) return;
         const { world, player } = window.currentGame;
         const parts = cmdText.split();
         const action = parts[0];
@@ -63,6 +69,7 @@ async function handleInput(e) {
             message = "Thanks for playing!";
             window.currentGame = null;
             document.getElementById('terminal-container').style.display = 'none';
+            output.innerHTML += message + "<br>";
             return;
         } else if (action === "look") {
             // handled by updateDisplay
@@ -111,10 +118,12 @@ async function handleInput(e) {
                 }
                 if (!itemId) {
                     const room = world.rooms[player.currentRoomId];
-                    for (const iid of room.itemIds) {
-                        if (world.items[iid].name.toLowerCase() === itemName) {
-                            itemId = iid;
-                            break;
+                    if (room) {
+                        for (const iid of room.itemIds) {
+                            if (world.items[iid].name.toLowerCase() === itemName) {
+                                itemId = iid;
+                                break;
+                            }
                         }
                     }
                 }

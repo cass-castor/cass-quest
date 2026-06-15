@@ -42,22 +42,32 @@ class Room {
 class Player {
     constructor(startRoomId, initialOxygen) {
         this.currentRoomId = startRoomId;
-        this.inventory = []; // List of item IDs
+        this.inventory = []; 
         this.oxygen = initialOxygen;
     }
 
     move(direction, world) {
         const room = world.rooms[this.currentRoomId];
-        if (room.exits[direction]) {
-            this.currentRoomId = room.exits[direction];
-            this.oxygen -= 1;
-            return true;
+        if (!room) {
+            console.error(`Room ${this.currentRoomId} not found in world.`);
+            return false;
+        }
+        if (room.exits && room.exits[direction]) {
+            const nextRoomId = room.exits[direction];
+            if (world.rooms[nextRoomId]) {
+                this.currentRoomId = nextRoomId;
+                this.oxygen -= 1;
+                return true;
+            } else {
+                console.error(`Exit ${direction} leads to non-existent room ${nextRoomId}.`);
+            }
         }
         return false;
     }
 
     take(itemName, world) {
         const room = world.rooms[this.currentRoomId];
+        if (!room) return null;
         for (const iid of room.itemIds) {
             const item = world.items[iid];
             if (item && item.name.toLowerCase() === itemName.toLowerCase() && item.takeable) {
@@ -79,13 +89,17 @@ class World {
         this.state = data.world_state || {};
 
         this.rooms = {};
-        for (const [rid, rdata] of Object.entries(data.rooms || {})) {
-            this.rooms[rid] = new Room(rid, rdata);
+        if (data.rooms) {
+            for (const [rid, rdata] of Object.entries(data.rooms)) {
+                this.rooms[rid] = new Room(rid, rdata);
+            }
         }
 
         this.items = {};
-        for (const [iid, idata] of Object.entries(data.items || {})) {
-            this.items[iid] = new Item(iid, idata);
+        if (data.items) {
+            for (const [iid, idata] of Object.entries(data.items)) {
+                this.items[iid] = new Item(iid, idata);
+            }
         }
 
         this.interactions = data.interactions || [];
