@@ -58,6 +58,7 @@ class Room {
 
 
 
+
 class World {
     constructor(scenarioData) {
         this.scenarioData = scenarioData;
@@ -65,7 +66,6 @@ class World {
         this.playerRoomId = this.startRoomId;
         this.playerInventory = [];
         this.state = scenarioData.initial_state || {};
-        this.playerGold = this.state.initial_gold || 10;
         this.vocabulary = scenarioData.vocabulary || {};
         this.templates = scenarioData.templates || {
             "room": "[{name}]\n{description}",
@@ -178,7 +178,6 @@ class World {
             return this.templates.move_fail.replace("{target}", target || "unknown destination");
         }
 
-        // Trading logic (Player to NPC)
         if (action === "trade") {
             const npc = this._getNpcByName(target);
             if (!npc) return `There is no one named ${target} here to trade with.`;
@@ -309,7 +308,7 @@ class World {
 
     _doOpen(item) {
         if (item.properties.is_open) {
-            return this.templates.already_open?.replace("{item}", item.name) || `The {item} is already open.`;
+            return this.templates.already_open?.replace("{item}", item.name) || `The ${item.name} is already open.`;
         }
         item.properties.is_open = true;
         return this.templates.open_success?.replace("{item}", item.name) || `You open the ${item.name}.`;
@@ -319,76 +318,83 @@ class World {
         this.worldTime++;
         const events = [];
 
-        // 1. Handle NPC Interactions (Social layer)
-        for (const [id, npc] of Object.entries(this.npcs)) {
-            const room = this.rooms[npc.currentRoom];
-            const others = Object.entries(this.npcs).filter(([oid, onpc]) => onpc.currentRoom === npc.currentRoom && oid !== id);
-            
-            if (others.length > 0 && npc.state.hunger && npc.state.hunger > 30) {
-                const other = others[0][1];
-                const foodItem = other.inventory.find(iid => this.items[iid] && this.items[iid].properties.food);
-                
-                if (foodItem && npc.gold >= 5) {
-                    // Trade: NPC buys food from other NPC
-                    npc.gold -= 5;
-                    other.gold += 5;
-                    npc.inventory.push(foodItem);
-                    other.inventory = other.inventory.filter(iid => iid !== foodItem);
-                    
-                    events.push(`${npc.name} traded 5 gold to ${other.name} for a ${this.items[foodItem].name}.`);
+        // 1. Resource Regeneration
+        for (const [rid, room] of Object.entries(this.rooms)) {
+            // Every 20 ticks, try to spawn a resource if it's a resource-rich room
+            if (this.worldTime % 20 === 0) {
+                const resourceId = this._getRandomResourceForRoom(rid);
+                if (resourceId && !room.items.includes(resourceId)) {
+                    room.items.push(resourceId);
+                    events.push(`A ${this.items[resourceId].name} has appeared in ${room.name}.`);
                 }
             }
         }
 
-        // 2. Handle NPC Movement (Active Inference)
+        // 2. NPC Logic
         for (const [id, npc] of Object.entries(this.npcs)) {
-            const room = this.rooms[npc.currentRoom];
-            if (!room) continue;
-
-            if (npc.state.hunger && npc.state.hunger > 50) {
-                const food = room.items.find(id => this.items[id] && this.items[id].properties.food);
-                if (food) {
-                    npc.state.hunger = 0;
-                    room.items = room.items.filter(id => id !== food);
-                    npc.inventory.push(food);
-                    events.push(`${npc.name} found food and ate it. Hunger satisfied.`);
-                } else {
-                    const exits = Object.keys(room.exits);
-                    if (exits.length > 0) {
-                        let bestDir = null;
-                        let maxBelief = -1;
-                        for (const dir of exits) {
-                            const destId = typeof room.exits[dir] === 'string' ? room.exits[dir] : room.exits[dir].dest;
-                            if (npc.beliefs[destId] > maxBelief) {
-                                maxBelief = npc.beliefs[destId];
-                                bestDir = dir;
-                            }
-                        }
-                        if (bestDir) {
-                            const destId = typeof room.exits[bestDir] === 'string' ? room.exits[bestDir] : room.exits[bestDir].dest;
-                            npc.currentRoom = destId;
-                            const newRoom = this.rooms[destId];
-                            const foundFood = newRoom.items.find(id => this.items[id] && this.items[id].properties.food);
-                            if (foundFood) npc.beliefs[destId] += 0.2;
-                            else npc.beliefs[destId] -= 0.05;
-                            events.push(`${npc.name} is searching for food and moved ${bestDir} to ${newRoom.name}.`);
-                        }
-                    }
-                }
-            } else if (Math.random() < 0.2) {
-                const exits = Object.keys(room.exits);
-                if (exits.length > 0) {
-                    const direction = exits[Math.floor(Math.random() * exits.length)];
-                    const dest = room.exits[direction];
-                    const destId = typeof dest === 'string' ? dest : dest.dest;
-                    npc.currentRoom = destId;
-                    events.push(`${npc.name} wandered ${direction} to ${this.rooms[destId].name}.`);
-                }
+            const decision = this._npcDecision(npc);
+            if (decision) {
+                events.push(decision);
             }
-
-            npc.state.hunger = (npc.state.hunger || 0) + 1;
         }
 
         return events;
+    }
+
+    _getRandomResourceForRoom(rid) {
+        if (rid === "forest_deep") return "apple";
+        if (rid === "mine_deep") return "copper_ore";
+        return null;
+    }
+
+    _npcDecision(npc) {
+        const room = this.rooms[npc.currentRoom];
+        if (!room) return null;
+
+        // 1. Hunger Logic (High Priority)
+        if (npc.state.hunger && npc.state.hunger > 50) {
+            const food = room.items.find(id => this.items[id] && this.items[id].properties.food);
+            if (food) {
+                npc.state.hunger = 0;
+                room.items = room.items.filter(id => id !== food);
+                npc.inventory.push(food);
+                return `${npc.name} found food and ate it. Hunger satisfied.`;
+            }
+
+            if (Math.random() < 0.7) {
+                const exits = Object.keys(room.exits);
+                if (exits.length === 0) return null;
+                const direction = exits[Math.floor(Math.random() * exits.length)];
+                const dest = room.exits[direction];
+                const destId = typeof dest === 'string' ? dest : dest.dest;
+                npc.currentRoom = destId;
+                return `${npc.name} is searching for food and moved ${direction} to ${this.rooms[destId].name}.`;
+            }
+        }
+
+        // 2. Greed Logic (Low Priority)
+        if (npc.state.gold && npc.state.gold < 100 && Math.random() < 0.3) {
+            const exits = Object.keys(room.exits);
+            if (exits.length === 0) return null;
+            const direction = exits[Math.floor(Math.random() * exits.length)];
+            const dest = room.exits[direction];
+            const destId = typeof dest === 'string' ? dest : dest.dest;
+            npc.currentRoom = destId;
+            return `${npc.name} is looking for ways to make gold and moved ${direction} to ${this.rooms[destId].name}.`;
+        }
+
+        // 3. Idle Wandering
+        if (Math.random() < 0.2) {
+            const exits = Object.keys(room.exits);
+            if (exits.length === 0) return null;
+            const direction = exits[Math.floor(Math.random() * exits.length)];
+            const dest = room.exits[direction];
+            const destId = typeof dest === 'string' ? dest : dest.dest;
+            npc.currentRoom = destId;
+            return `${npc.name} wandered ${direction} to ${this.rooms[destId].name}.`;
+        }
+
+        npc.state.hunger = (npc.state.hunger || 0) + 1;
+        return null;
     }
 }
