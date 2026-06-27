@@ -54,6 +54,7 @@ class Room {
     }
 }
 
+
 class World {
     constructor(scenarioData) {
         this.scenarioData = scenarioData;
@@ -72,11 +73,25 @@ class World {
         this.parser = new Parser(this.vocabulary);
         this.rooms = {};
         this.items = {};
+        this.npcs = {}; // id -> NPC object
+        this.worldTime = 0;
+
         for (const [iid, idata] of Object.entries(scenarioData.items)) {
             this.items[iid] = new Item(idata);
         }
         for (const [rid, rdata] of Object.entries(scenarioData.rooms)) {
             this.rooms[rid] = new Room(rdata);
+        }
+        
+        // Initialize NPCs from scenario data
+        if (scenarioData.npcs) {
+            for (const [nid, ndata] of Object.entries(scenarioData.npcs)) {
+                this.npcs[nid] = {
+                    ...ndata,
+                    currentRoom: ndata.start_room,
+                    state: ndata.initial_state || {}
+                };
+            }
         }
     }
 
@@ -84,7 +99,20 @@ class World {
 
     getRoomDescription() {
         const room = this.getRoom();
-        return room ? room.description : "You are in a void.";
+        if (!room) return "You are in a void.";
+        
+        let desc = room.description;
+        
+        // Add NPCs present in the room to the description
+        const presentNpcs = Object.entries(this.npcs)
+            .filter(([id, npc]) => npc.currentRoom === this.playerRoomId)
+            .map(([id, npc]) => npc.name);
+            
+        if (presentNpcs.length > 0) {
+            desc += "\n\nPeople here: " + presentNpcs.join(", ");
+        }
+        
+        return desc;
     }
 
     getItem(targetName) {
@@ -141,7 +169,7 @@ class World {
 
         if (action === "move") {
             const result = this.move(target);
-            if (result === true) return this.templates.move_success.replace("{target}", target) + "\n\n" + this.getRoomDescription();
+            if (result === true) return this.templates.move_success.replace("{target}", target);
             if (result === "LOCKED_EXIT") return this.templates.move_fail;
             return this.templates.move_fail.replace("{target}", target || "unknown destination");
         }
@@ -261,5 +289,65 @@ class World {
         }
         item.properties.is_open = true;
         return this.templates.open_success?.replace("{item}", item.name) || `You open the ${item.name}.`;
+    }
+
+    tick() {
+        this.worldTime++;
+        const events = [];
+
+        // Process NPCs
+        for (const [id, npc] of Object.entries(this.npcs)) {
+            const decision = this._npcDecision(npc);
+            if (decision) {
+                events.push(decision);
+            }
+        }
+
+        return events;
+    }
+
+    _npcDecision(npc) {
+        const room = this.rooms[npc.currentRoom];
+        if (!room) return null;
+
+        // 1. Check for Needs (e.g., Hunger)
+        if (npc.state.hunger && npc.state.hunger > 50) {
+            // Search for food in current room
+            const food = room.items.find(id => this.items[id].properties.food);
+            if (food) {
+                npc.state.hunger = 0;
+                return `${npc.name} found some food and is no longer hungry.`;
+            }
+
+            // Otherwise, try to move toward a known food source (Simplified: just move randomly but with higher probability)
+            if (Math.random() < 0.7) {
+                const exits = Object.keys(room.exits);
+                if (exits.length === 0) return null;
+                const direction = exits[Math.floor(Math.random() * exits.length)];
+                const dest = room.exits[direction];
+                const destId = typeof dest === 'string' ? dest : dest.dest;
+                npc.currentRoom = destId;
+                return `${npc.name} is searching for food and moved ${direction} to ${this.rooms[destId].name}.`;
+            }
+        }
+
+        // 2. Default: Idle/Random Movement
+        if (Math.random() < 0.2) {
+            const exits = Object.keys(room.exits);
+            if (exits.length === 0) return null;
+            const direction = exits[Math.floor(Math.random() * exits.length)];
+            const dest = room.exits[direction];
+            const destId = typeof dest === 'string' ? dest : dest.dest;
+            npc.currentRoom = destId;
+            return `${npc.name} wandered ${direction} to ${this.rooms[destId].name}.`;
+        }
+
+        // 3. Increment Hunger over time
+        npc.state.hunger = (npc.state.hunger || 0) + 1;
+        if (npc.state.hunger % 10 === 0) {
+            return `${npc.name} is starting to feel hungry...`;
+        }
+
+        return null;
     }
 }

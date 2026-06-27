@@ -22,7 +22,8 @@
     ],
     "use": [
       "use",
-      "activate"
+      "activate",
+      "eat"
     ],
     "take": [
       "get",
@@ -49,7 +50,7 @@
     "room": "\n[{name}]\n{description}",
     "item_not_found": "You don't see any {target} here.",
     "cant_do": "You can't {verb} the {item}.",
-    "move_success": "You travel to {target}.",
+    "move_success": "You move to {target}.",
     "move_fail": "You can't go that way.",
     "take_success": "You pick up {item}.",
     "already_have": "You already have {item}.",
@@ -61,7 +62,8 @@
     "strength": 1,
     "mining": 1,
     "woodcutting": 1,
-    "combat_xp": 0
+    "combat_xp": 0,
+    "hunger": 0
   },
   "rooms": {
     "town_center": {
@@ -130,7 +132,8 @@
       },
       "items": [
         "oak_tree",
-        "forest_spider"
+        "forest_spider",
+        "apple"
       ]
     }
   },
@@ -228,30 +231,22 @@
           "response": "You face the giant spider!"
         }
       }
-    }
-  },
-  "npcs": {
-    "villager_1": {
-      "name": "Old Man Jenkins",
-      "start_room": "town_center",
-      "initial_state": {
-        "hunger": 0,
-        "mood": "grumpy"
-      }
     },
-    "villager_2": {
-      "name": "Young Timmy",
-      "start_room": "town_center",
-      "initial_state": {
-        "hunger": 0,
-        "mood": "energetic"
-      }
-    },
-    "goblin_scout": {
-      "name": "Goblin Scout",
-      "start_room": "goblin_cave",
-      "initial_state": {
-        "aggression": 10
+    "apple": {
+      "id": "apple",
+      "name": "Wild Apple",
+      "description": "A crisp, red apple. Looks delicious.",
+      "properties": {
+        "portable": true,
+        "food": true
+      },
+      "interactions": {
+        "eat": {
+          "effect": {
+            "hunger": "-30"
+          },
+          "response": "You eat the apple. It's delicious!"
+        }
       }
     }
   }
