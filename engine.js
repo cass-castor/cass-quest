@@ -55,6 +55,8 @@ class Room {
 }
 
 
+
+
 class World {
     constructor(scenarioData) {
         this.scenarioData = scenarioData;
@@ -73,7 +75,7 @@ class World {
         this.parser = new Parser(this.vocabulary);
         this.rooms = {};
         this.items = {};
-        this.npcs = {}; // id -> NPC object
+        this.npcs = {}; 
         this.worldTime = 0;
 
         for (const [iid, idata] of Object.entries(scenarioData.items)) {
@@ -83,14 +85,20 @@ class World {
             this.rooms[rid] = new Room(rdata);
         }
         
-        // Initialize NPCs from scenario data
         if (scenarioData.npcs) {
             for (const [nid, ndata] of Object.entries(scenarioData.npcs)) {
                 this.npcs[nid] = {
                     ...ndata,
                     currentRoom: ndata.start_room,
-                    state: ndata.initial_state || {}
+                    inventory: ndata.initial_inventory || [],
+                    gold: ndata.initial_gold || 20,
+                    state: ndata.initial_state || {},
+                    beliefs: {} // roomId -> probability of finding food/resources
                 };
+                // Initialize beliefs: assume all rooms are equally likely to have food
+                for (const rid in this.rooms) {
+                    this.npcs[nid].beliefs[rid] = 0.1;
+                }
             }
         }
     }
@@ -100,18 +108,13 @@ class World {
     getRoomDescription() {
         const room = this.getRoom();
         if (!room) return "You are in a void.";
-        
         let desc = room.description;
-        
-        // Add NPCs present in the room to the description
         const presentNpcs = Object.entries(this.npcs)
             .filter(([id, npc]) => npc.currentRoom === this.playerRoomId)
             .map(([id, npc]) => npc.name);
-            
         if (presentNpcs.length > 0) {
             desc += "\n\nPeople here: " + presentNpcs.join(", ");
         }
-        
         return desc;
     }
 
@@ -261,7 +264,7 @@ class World {
             playerHp -= playerDamage;
             this.state.hp = playerHp;
             
-            logMsg += ` The ${targetItem.name} hits you back for ${playerDamage} damage. (Your HP: ${playerHp})`;
+            logMsg += ` The ${targetItem.name} hits you back for ${playerDamage} damage. (Your HP: ${playerH}p)`;
             
             if (playerHp <= 0) {
                 return `${logMsg}\n You have been defeated! You wake up in the town square.`;
@@ -295,7 +298,6 @@ class World {
         this.worldTime++;
         const events = [];
 
-        // Process NPCs
         for (const [id, npc] of Object.entries(this.npcs)) {
             const decision = this._npcDecision(npc);
             if (decision) {
@@ -310,28 +312,50 @@ class World {
         const room = this.rooms[npc.currentRoom];
         if (!room) return null;
 
-        // 1. Check for Needs (e.g., Hunger)
+        // 1. Active Inference: Minimize Surprise
+        // If hungry, seek room with highest perceived probability of food
         if (npc.state.hunger && npc.state.hunger > 50) {
-            // Search for food in current room
-            const food = room.items.find(id => this.items[id].properties.food);
-            if (food) {
+            const foodInCurrentRoom = room.items.find(id => this.items[id] && this.items[id].properties.food);
+            if (foodInCurrentRoom) {
                 npc.state.hunger = 0;
-                return `${npc.name} found some food and is no longer hungry.`;
+                room.items = room.items.filter(id => id !== foodInCurrentRoom);
+                npc.inventory.push(foodInCurrentRoom);
+                return `${npc.name} found food and ate it. Hunger satisfied.`;
             }
 
-            // Otherwise, try to move toward a known food source (Simplified: just move randomly but with higher probability)
-            if (Math.random() < 0.7) {
-                const exits = Object.keys(room.exits);
-                if (exits.length === 0) return null;
-                const direction = exits[Math.floor(Math.random() * exits.length)];
-                const dest = room.exits[direction];
-                const destId = typeof dest === 'string' ? dest : dest.dest;
+            // Move to room with highest belief of food
+            const exits = Object.keys(room.exits);
+            if (exits.length === 0) return null;
+
+            let bestDir = null;
+            let maxBelief = -1;
+
+            for (const dir of exits) {
+                const destId = typeof room.exits[dir] === 'string' ? room.exits[dir] : room.exits[dir].dest;
+                if (npc.beliefs[destId] > maxBelief) {
+                    maxBelief = npc.beliefs[destId];
+                    bestDir = dir;
+                }
+            }
+
+            if (bestDir) {
+                const destId = typeof room.exits[bestDir] === 'string' ? room.exits[bestDir] : room.exits[bestDir].dest;
                 npc.currentRoom = destId;
-                return `${npc.name} is searching for food and moved ${direction} to ${this.rooms[destId].name}.`;
+                
+                // Update belief: if we find food here, increase belief; otherwise, decrease.
+                const newRoom = this.rooms[destId];
+                const foundFood = newRoom.items.find(id => this.items[id] && this.items[id].properties.food);
+                if (foundFood) {
+                    npc.beliefs[destId] += 0.2;
+                } else {
+                    npc.beliefs[destId] -= 0.05;
+                }
+                
+                return `${npc.name} is following their instinct for food and moved ${bestDir} to ${newRoom.name}.`;
             }
         }
 
-        // 2. Default: Idle/Random Movement
+        // 2. Idle Wandering (Epistemic Exploration)
         if (Math.random() < 0.2) {
             const exits = Object.keys(room.exits);
             if (exits.length === 0) return null;
@@ -342,12 +366,7 @@ class World {
             return `${npc.name} wandered ${direction} to ${this.rooms[destId].name}.`;
         }
 
-        // 3. Increment Hunger over time
         npc.state.hunger = (npc.state.hunger || 0) + 1;
-        if (npc.state.hunger % 10 === 0) {
-            return `${npc.name} is starting to feel hungry...`;
-        }
-
         return null;
     }
 }
