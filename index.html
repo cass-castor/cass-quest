@@ -78,7 +78,17 @@
             print("Type 'help' for commands or 'exit' to quit.\n");
 
             const scenarioData = await loadScenario('scenarios/runescape_lite.json');
+            
             const world = new World(scenarioData);
+
+            // World Tick System: Update world state every 5 seconds
+            setInterval(() => {
+                const events = world.tick();
+                if (events && events.length > 0) {
+                    events.forEach(event => print(event, 'sys'));
+                }
+            }, 5000);
+
 
             function updatePrompt() {
                 const user = world.state.user || "guest";
