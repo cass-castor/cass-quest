@@ -83,7 +83,8 @@
             function updatePrompt() {
                 const user = world.state.user || "guest";
                 const host = world.state.host || "quest-node";
-                const path = world.getRoom().name;
+                const room = world.getRoom();
+                const path = room ? room.name : "unknown_location";
                 prompt.textContent = `${user}@${host}:${path}$ `;
             }
 
