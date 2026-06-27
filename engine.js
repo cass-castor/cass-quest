@@ -57,12 +57,14 @@ class Room {
 
 
 
+
 class World {
     constructor(scenarioData) {
         this.scenarioData = scenarioData;
         this.startRoomId = scenarioData.start_room;
         this.playerRoomId = this.startRoomId;
         this.playerInventory = [];
+        this.playerGold = this.state.initial_gold || 10;
         this.state = scenarioData.initial_state || {};
         this.vocabulary = scenarioData.vocabulary || {};
         this.templates = scenarioData.templates || {
@@ -93,9 +95,8 @@ class World {
                     inventory: ndata.initial_inventory || [],
                     gold: ndata.initial_gold || 20,
                     state: ndata.initial_state || {},
-                    beliefs: {} // roomId -> probability of finding food/resources
+                    beliefs: {} 
                 };
-                // Initialize beliefs: assume all rooms are equally likely to have food
                 for (const rid in this.rooms) {
                     this.npcs[nid].beliefs[rid] = 0.1;
                 }
@@ -177,6 +178,15 @@ class World {
             return this.templates.move_fail.replace("{target}", target || "unknown destination");
         }
 
+        // Trading logic (Player to NPC)
+        if (action === "trade") {
+            const npc = this._getNpcByName(target);
+            if (!npc) return `There is no one named ${target} here to trade with.`;
+            
+            const npcItems = npc.inventory.map(id => this.items[id].name).join(", ") || "nothing";
+            return `${npc.name} says: "I have ${npcItems}. I'll trade a resource for 5 gold."`;
+        }
+
         const item = this.getItem(target);
         if (!item) {
             return this.templates.item_not_found.replace("{target}", target || "nothing");
@@ -228,6 +238,17 @@ class World {
         return this.templates.cant_do.replace("{verb}", action).replace("{item}", item.name);
     }
 
+    _getNpcByName(name) {
+        const room = this.getRoom();
+        if (!room) return null;
+        for (const [id, npc] of Object.entries(this.npcs)) {
+            if (npc.currentRoom === this.playerRoomId && npc.name.toLowerCase() === name.toLowerCase()) {
+                return npc;
+            }
+        }
+        return null;
+    }
+
     _handleCombat(action, target) {
         const targetId = this.state.combat_target;
         const targetItem = this.items[targetId];
@@ -264,7 +285,7 @@ class World {
             playerHp -= playerDamage;
             this.state.hp = playerHp;
             
-            logMsg += ` The ${targetItem.name} hits you back for ${playerDamage} damage. (Your HP: ${playerH}p)`;
+            logMsg += ` The ${targetItem.name} hits you back for ${playerDamage} damage. (Your HP: ${playerHp})`;
             
             if (playerHp <= 0) {
                 return `${logMsg}\n You have been defeated! You wake up in the town square.`;
@@ -288,7 +309,7 @@ class World {
 
     _doOpen(item) {
         if (item.properties.is_open) {
-            return this.templates.already_open?.replace("{item}", item.name) || `The ${item.name} is already open.`;
+            return this.templates.already_open?.replace("{item}", item.name) || `The {item} is already open.`;
         }
         item.properties.is_open = true;
         return this.templates.open_success?.replace("{item}", item.name) || `You open the ${item.name}.`;
@@ -298,75 +319,76 @@ class World {
         this.worldTime++;
         const events = [];
 
+        // 1. Handle NPC Interactions (Social layer)
         for (const [id, npc] of Object.entries(this.npcs)) {
-            const decision = this._npcDecision(npc);
-            if (decision) {
-                events.push(decision);
+            const room = this.rooms[npc.currentRoom];
+            const others = Object.entries(this.npcs).filter(([oid, onpc]) => onpc.currentRoom === npc.currentRoom && oid !== id);
+            
+            if (others.length > 0 && npc.state.hunger && npc.state.hunger > 30) {
+                const other = others[0][1];
+                const foodItem = other.inventory.find(iid => this.items[iid] && this.items[iid].properties.food);
+                
+                if (foodItem && npc.gold >= 5) {
+                    // Trade: NPC buys food from other NPC
+                    npc.gold -= 5;
+                    other.gold += 5;
+                    npc.inventory.push(foodItem);
+                    other.inventory = other.inventory.filter(iid => iid !== foodItem);
+                    
+                    events.push(`${npc.name} traded 5 gold to ${other.name} for a ${this.items[foodItem].name}.`);
+                }
             }
+        }
+
+        // 2. Handle NPC Movement (Active Inference)
+        for (const [id, npc] of Object.entries(this.npcs)) {
+            const room = this.rooms[npc.currentRoom];
+            if (!room) continue;
+
+            if (npc.state.hunger && npc.state.hunger > 50) {
+                const food = room.items.find(id => this.items[id] && this.items[id].properties.food);
+                if (food) {
+                    npc.state.hunger = 0;
+                    room.items = room.items.filter(id => id !== food);
+                    npc.inventory.push(food);
+                    events.push(`${npc.name} found food and ate it. Hunger satisfied.`);
+                } else {
+                    const exits = Object.keys(room.exits);
+                    if (exits.length > 0) {
+                        let bestDir = null;
+                        let maxBelief = -1;
+                        for (const dir of exits) {
+                            const destId = typeof room.exits[dir] === 'string' ? room.exits[dir] : room.exits[dir].dest;
+                            if (npc.beliefs[destId] > maxBelief) {
+                                maxBelief = npc.beliefs[destId];
+                                bestDir = dir;
+                            }
+                        }
+                        if (bestDir) {
+                            const destId = typeof room.exits[bestDir] === 'string' ? room.exits[bestDir] : room.exits[bestDir].dest;
+                            npc.currentRoom = destId;
+                            const newRoom = this.rooms[destId];
+                            const foundFood = newRoom.items.find(id => this.items[id] && this.items[id].properties.food);
+                            if (foundFood) npc.beliefs[destId] += 0.2;
+                            else npc.beliefs[destId] -= 0.05;
+                            events.push(`${npc.name} is searching for food and moved ${bestDir} to ${newRoom.name}.`);
+                        }
+                    }
+                }
+            } else if (Math.random() < 0.2) {
+                const exits = Object.keys(room.exits);
+                if (exits.length > 0) {
+                    const direction = exits[Math.floor(Math.random() * exits.length)];
+                    const dest = room.exits[direction];
+                    const destId = typeof dest === 'string' ? dest : dest.dest;
+                    npc.currentRoom = destId;
+                    events.push(`${npc.name} wandered ${direction} to ${this.rooms[destId].name}.`);
+                }
+            }
+
+            npc.state.hunger = (npc.state.hunger || 0) + 1;
         }
 
         return events;
-    }
-
-    _npcDecision(npc) {
-        const room = this.rooms[npc.currentRoom];
-        if (!room) return null;
-
-        // 1. Active Inference: Minimize Surprise
-        // If hungry, seek room with highest perceived probability of food
-        if (npc.state.hunger && npc.state.hunger > 50) {
-            const foodInCurrentRoom = room.items.find(id => this.items[id] && this.items[id].properties.food);
-            if (foodInCurrentRoom) {
-                npc.state.hunger = 0;
-                room.items = room.items.filter(id => id !== foodInCurrentRoom);
-                npc.inventory.push(foodInCurrentRoom);
-                return `${npc.name} found food and ate it. Hunger satisfied.`;
-            }
-
-            // Move to room with highest belief of food
-            const exits = Object.keys(room.exits);
-            if (exits.length === 0) return null;
-
-            let bestDir = null;
-            let maxBelief = -1;
-
-            for (const dir of exits) {
-                const destId = typeof room.exits[dir] === 'string' ? room.exits[dir] : room.exits[dir].dest;
-                if (npc.beliefs[destId] > maxBelief) {
-                    maxBelief = npc.beliefs[destId];
-                    bestDir = dir;
-                }
-            }
-
-            if (bestDir) {
-                const destId = typeof room.exits[bestDir] === 'string' ? room.exits[bestDir] : room.exits[bestDir].dest;
-                npc.currentRoom = destId;
-                
-                // Update belief: if we find food here, increase belief; otherwise, decrease.
-                const newRoom = this.rooms[destId];
-                const foundFood = newRoom.items.find(id => this.items[id] && this.items[id].properties.food);
-                if (foundFood) {
-                    npc.beliefs[destId] += 0.2;
-                } else {
-                    npc.beliefs[destId] -= 0.05;
-                }
-                
-                return `${npc.name} is following their instinct for food and moved ${bestDir} to ${newRoom.name}.`;
-            }
-        }
-
-        // 2. Idle Wandering (Epistemic Exploration)
-        if (Math.random() < 0.2) {
-            const exits = Object.keys(room.exits);
-            if (exits.length === 0) return null;
-            const direction = exits[Math.floor(Math.random() * exits.length)];
-            const dest = room.exits[direction];
-            const destId = typeof dest === 'string' ? dest : dest.dest;
-            npc.currentRoom = destId;
-            return `${npc.name} wandered ${direction} to ${this.rooms[destId].name}.`;
-        }
-
-        npc.state.hunger = (npc.state.hunger || 0) + 1;
-        return null;
     }
 }
