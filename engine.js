@@ -11,8 +11,10 @@ class Parser {
         const tokens = text.split(/\s+/);
         const filtered = tokens.filter(t => !this.noiseWords.has(t));
         if (filtered.length === 0) return { action: null, target: null };
+        
         const rawVerb = filtered[0];
         const target = filtered.slice(1).join(" ");
+        
         let canonicalAction = null;
         for (const [action, aliases] of Object.entries(this.vocabulary)) {
             if (rawVerb === action || aliases.includes(rawVerb)) {
@@ -20,7 +22,13 @@ class Parser {
                 break;
             }
         }
+        
         if (!canonicalAction) canonicalAction = rawVerb;
+        
+        if (canonicalAction === "move" && !target) {
+            return { action: "move", target: rawVerb };
+        }
+        
         return { action: canonicalAction, target: target || null };
     }
 }
@@ -76,11 +84,12 @@ class World {
 
     getRoomDescription() {
         const room = this.getRoom();
-        return room.description;
+        return room ? room.description : "You are in a void.";
     }
 
     getItem(targetName) {
         const room = this.getRoom();
+        if (!room) return null;
         const matches = (item, target) => {
             if (!target) return false;
             const tLow = target.toLowerCase();
@@ -100,6 +109,7 @@ class World {
 
     move(target) {
         const room = this.getRoom();
+        if (!room) return false;
         if (target in room.exits) {
             const exitData = room.exits[target];
             if (typeof exitData === 'object') {
@@ -124,6 +134,7 @@ class World {
 
         if (action === "examine" && !target) {
             const room = this.getRoom();
+            if (!room) return "You are nowhere.";
             const items = room.items.map(id => this.items[id].name);
             return items.length > 0 ? items.join("  ") : "Nothing here.";
         }
@@ -236,7 +247,7 @@ class World {
 
     _doTake(item) {
         const room = this.getRoom();
-        if (room.items.includes(item.id)) {
+        if (room && room.items.includes(item.id)) {
             room.items = room.items.filter(id => id !== item.id);
             this.playerInventory.push(item.id);
             return this.templates.take_success?.replace("{item}", item.name) || "Taken.";
