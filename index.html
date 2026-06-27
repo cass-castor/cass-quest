@@ -115,9 +115,7 @@
                     const { action, target } = world.parser.parse(cmd);
                     if (action) {
                         // Special trigger for syslog
-                        if (action === "read" && target === "syslog") {
-                            world.state.admin_pass_known = true;
-                        }
+                        
                         
                         const result = world.handleInteraction(action, target);
                         print(result);

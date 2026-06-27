@@ -153,7 +153,12 @@
       "name": "syslog",
       "description": "The system log file.",
       "interactions": {
-        "read": "Scanning logs... \n[INFO] Admin logged in from 10.0.0.5\n[DEBUG] Session key: 'S3cur3P@ss!'\n[INFO] Connection closed."
+        "read": {
+          "effect": {
+            "admin_pass_known": true
+          },
+          "response": "Scanning logs... \n[INFO] Admin logged in from 10.0.0.5\n[DEBUG] Session key: 'S3cur3P@ss!'\n[INFO] Connection closed."
+        }
       }
     },
     "admin_portal_sh": {
