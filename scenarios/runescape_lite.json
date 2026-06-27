@@ -1,0 +1,66 @@
+{
+  "start_room": "town_center",
+  "vocabulary": {
+    "move": [
+      "cd",
+      "go",
+      "walk",
+      "north",
+      "south",
+      "east",
+      "west"
+    ],
+    "examine": [
+      "ls",
+      "look",
+      "examine"
+    ],
+    "read": [
+      "cat",
+      "read"
+    ],
+    "use": [
+      "use",
+      "activate"
+    ],
+    "take": [
+      "get",
+      "take",
+      "pick"
+    ],
+    "inventory": [
+      "inv",
+      "items"
+    ],
+    "attack": [
+      "attack",
+      "fight",
+      "hit"
+    ],
+    "flee": [
+      "flee",
+      "run",
+      "escape"
+    ]
+  },
+  "templates": {
+    "room": "\n[{name}]\n{description}",
+    "item_not_found": "You don't see a {target} here.",
+    "cant_do": "You can't {verb} the {item}.",
+    "move_success": "You move to {target}.",
+    "move_fail": "You can't go that way.",
+    "take_success": "You pick up {item}.",
+    "already_have": "You already have {item}.",
+    "open_success": "You open the {item}.",
+    "already_open": "The {item} is already open."
+  },
+  "initial_state": {
+    "hp": 100,
+    "strength": 1,
+    "mining": 1,
+    "woodcutting": 1,
+    "combat_xp": 0
+  },
+  "rooms": {},
+  "items": {}
+}

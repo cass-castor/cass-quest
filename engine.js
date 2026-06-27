@@ -2,21 +2,17 @@
 class Parser {
     constructor(vocabulary = {}) {
         this.noiseWords = new Set(["the", "a", "an", "of", "at", "to", "from", "some", "with"]);
-        this.vocabulary = vocabulary; // Maps canonical action -> [aliases]
+        this.vocabulary = vocabulary;
     }
 
     parse(text) {
         text = text.toLowerCase().trim();
         if (!text) return { action: null, target: null };
-
         const tokens = text.split(/\s+/);
         const filtered = tokens.filter(t => !this.noiseWords.has(t));
-
         if (filtered.length === 0) return { action: null, target: null };
-
         const rawVerb = filtered[0];
         const target = filtered.slice(1).join(" ");
-
         let canonicalAction = null;
         for (const [action, aliases] of Object.entries(this.vocabulary)) {
             if (rawVerb === action || aliases.includes(rawVerb)) {
@@ -24,11 +20,7 @@ class Parser {
                 break;
             }
         }
-
-        if (!canonicalAction) {
-            canonicalAction = rawVerb;
-        }
-
+        if (!canonicalAction) canonicalAction = rawVerb;
         return { action: canonicalAction, target: target || null };
     }
 }
@@ -69,36 +61,21 @@ class World {
             "move_success": "You move to {target}.",
             "move_fail": "The way is blocked or locked."
         };
-
         this.parser = new Parser(this.vocabulary);
         this.rooms = {};
         this.items = {};
-
-        // Initialize items first
         for (const [iid, idata] of Object.entries(scenarioData.items)) {
             this.items[iid] = new Item(idata);
         }
-
-        // Initialize rooms
         for (const [rid, rdata] of Object.entries(scenarioData.rooms)) {
             this.rooms[rid] = new Room(rdata);
         }
     }
 
-    getRoom() {
-        return this.rooms[this.playerRoomId];
-    }
+    getRoom() { return this.rooms[this.playerRoomId]; }
 
     getRoomDescription() {
         const room = this.getRoom();
-        if (room.dynamic_descriptions) {
-            for (const [stateKey, valueMap] of Object.entries(room.dynamic_descriptions)) {
-                const currentVal = this.state[stateKey];
-                if (valueMap[currentVal] !== undefined) {
-                    return valueMap[currentVal];
-                }
-            }
-        }
         return room.description;
     }
 
@@ -110,36 +87,13 @@ class World {
             return (item.name && item.name.toLowerCase() === tLow) || 
                    (item.id && item.id.toLowerCase() === tLow);
         };
-
-        // 1. Room items
         for (const iid of room.items) {
             const item = this.items[iid];
             if (matches(item, targetName)) return item;
         }
-        // 2. Inventory items
         for (const iid of this.playerInventory) {
             const item = this.items[iid];
             if (matches(item, targetName)) return item;
-        }
-        // 3. Open containers in room
-        for (const iid of room.items) {
-            const container = this.items[iid];
-            if (container.properties.openable && container.properties.is_open) {
-                for (const cid of container.contents) {
-                    const item = this.items[cid];
-                    if (matches(item, targetName)) return item;
-                }
-            }
-        }
-        // 4. Open containers in inventory
-        for (const iid of this.playerInventory) {
-            const container = this.items[iid];
-            if (container.properties.openable && container.properties.is_open) {
-                for (const cid of container.contents) {
-                    const item = this.items[cid];
-                    if (matches(item, targetName)) return item;
-                }
-            }
         }
         return null;
     }
@@ -152,9 +106,7 @@ class World {
                 const condition = exitData.condition;
                 if (condition) {
                     const [key, val] = condition;
-                    if (this.state[key] !== val) {
-                        return "LOCKED_EXIT";
-                    }
+                    if ((this.state[key] || 0) < val) return "LOCKED_EXIT";
                 }
                 this.playerRoomId = exitData.dest;
             } else {
@@ -165,13 +117,15 @@ class World {
         return false;
     }
 
-    
     handleInteraction(action, target) {
-        // Handle listing the room (ls, dir, look)
-        if (action === "list" || action === "ls" || (action === "examine" && !target)) {
+        if (this.state.in_combat) {
+            return this._handleCombat(action, target);
+        }
+
+        if (action === "examine" && !target) {
             const room = this.getRoom();
             const items = room.items.map(id => this.items[id].name);
-            return items.length > 0 ? items.join("  ") : "Directory is empty.";
+            return items.length > 0 ? items.join("  ") : "Nothing here.";
         }
 
         if (action === "move") {
@@ -191,14 +145,25 @@ class World {
             if (typeof interaction === 'object') {
                 if (interaction.condition) {
                     const [key, val] = interaction.condition;
-                    if (this.state[key] !== val) {
-                        return interaction.fail_response || "You can't do that right now.";
+                    if ((this.state[key] || 0) < val) {
+                        return interaction.fail_response || "You don't have the required skill.";
                     }
                 }
                 if (interaction.effect) {
                     for (const [k, v] of Object.entries(interaction.effect)) {
-                        this.state[k] = v;
+                        if (typeof v === 'string' && v.startsWith('+')) {
+                            this.state[k] = (this.state[k] || 0) + parseInt(v.substring(1));
+                        } else if (typeof v === 'string' && v.startsWith('-')) {
+                            this.state[k] = (this.state[k] || 0) - parseInt(v.substring(1));
+                        } else {
+                            this.state[k] = v;
+                        }
                     }
+                }
+                if (interaction.start_combat) {
+                    this.state.in_combat = true;
+                    this.state.combat_target = item.id;
+                    return `A ${item.name} attacks! You are now in combat. Commands: attack, flee.`;
                 }
                 return interaction.response || "Action performed.";
             } else {
@@ -221,43 +186,61 @@ class World {
         return this.templates.cant_do.replace("{verb}", action).replace("{item}", item.name);
     }
 
-    _doTake(item)
- {
+    _handleCombat(action, target) {
+        const targetId = this.state.combat_target;
+        const targetItem = this.items[targetId];
+        if (!targetItem) {
+            this.state.in_combat = false;
+            return "The enemy has vanished.";
+        }
+
+        if (action === "flee") {
+            this.state.in_combat = false;
+            return "You managed to escape the fight!";
+        }
+
+        if (action === "attack") {
+            const strLevel = this.state.strength || 1;
+            let enemyHp = targetItem.properties.hp || 10;
+            const damage = strLevel + 1;
+            
+            enemyHp -= damage;
+            targetItem.properties.hp = enemyHp;
+            
+            let logMsg = `You hit the ${targetItem.name} for ${damage} damage!`;
+            
+            if (enemyHp <= 0) {
+                this.state.in_combat = false;
+                const xpGain = targetItem.properties.xp || 10;
+                this.state.combat_xp = (this.state.combat_xp || 0) + xpGain;
+                return `${logMsg}\n The ${targetItem.name} is defeated! You gain ${xpGain} combat XP.`;
+            }
+            
+            const enemyStr = targetItem.properties.strength || 1;
+            let playerHp = this.state.hp || 100;
+            const playerDamage = enemyStr;
+            playerHp -= playerDamage;
+            this.state.hp = playerHp;
+            
+            logMsg += ` The ${targetItem.name} hits you back for ${playerDamage} damage. (Your HP: ${playerHp})`;
+            
+            if (playerHp <= 0) {
+                return `${logMsg}\n You have been defeated! You wake up in the town square.`;
+            }
+            
+            return logMsg;
+        }
+
+        return "In combat, you can only 'attack' or 'flee'.";
+    }
+
+    _doTake(item) {
         const room = this.getRoom();
-        let containerId = null;
-        for (const iid of room.items) {
-            const container = this.items[iid];
-            if (container.contents && item.id in container.contents) { // wait, item.id is a string
-                // The original python used item.id in container.contents
-            }
-        }
-        // Refined container check for JS
-        const findContainer = (list) => {
-            for (const iid of list) {
-                const container = this.items[iid];
-                if (container.contents && container.contents.includes(item.id)) return iid;
-            }
-            return null;
-        };
-
-        containerId = findContainer(room.items) || findContainer(this.playerInventory);
-
-        if (containerId) {
-            const container = this.items[containerId];
-            if (!container.properties.is_open) {
-                return this.templates.container_closed?.replace("{name}", container.name) || `The ${container.name} is closed.`;
-            }
-            container.contents = container.contents.filter(id => id !== item.id);
-            this.playerInventory.push(item.id);
-            return this.templates.take_success?.replace("{item}", item.name).replace("{container}", container.name) || `Taken from ${container.name}.`;
-        }
-
         if (room.items.includes(item.id)) {
             room.items = room.items.filter(id => id !== item.id);
             this.playerInventory.push(item.id);
             return this.templates.take_success?.replace("{item}", item.name) || "Taken.";
         }
-
         return this.templates.already_have?.replace("{item}", item.name) || `You already have ${item.name}.`;
     }
 
@@ -266,11 +249,6 @@ class World {
             return this.templates.already_open?.replace("{item}", item.name) || `The ${item.name} is already open.`;
         }
         item.properties.is_open = true;
-        let contentsMsg = "";
-        if (item.contents && item.contents.length > 0) {
-            const names = item.contents.map(id => this.items[id].name).join(", ");
-            contentsMsg = ` ${this.templates.inside_view?.replace("{item}", item.name) || "Inside you see:"} ${names}`;
-        }
-        return (this.templates.open_success?.replace("{item}", item.name) || `You open the ${item.name}.`) + contentsMsg;
+        return this.templates.open_success?.replace("{item}", item.name) || `You open the ${item.name}.`;
     }
 }
