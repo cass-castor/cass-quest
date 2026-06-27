@@ -229,5 +229,30 @@
         }
       }
     }
+  },
+  "npcs": {
+    "villager_1": {
+      "name": "Old Man Jenkins",
+      "start_room": "town_center",
+      "initial_state": {
+        "hunger": 0,
+        "mood": "grumpy"
+      }
+    },
+    "villager_2": {
+      "name": "Young Timmy",
+      "start_room": "town_center",
+      "initial_state": {
+        "hunger": 0,
+        "mood": "energetic"
+      }
+    },
+    "goblin_scout": {
+      "name": "Goblin Scout",
+      "start_room": "goblin_cave",
+      "initial_state": {
+        "aggression": 10
+      }
+    }
   }
 }
