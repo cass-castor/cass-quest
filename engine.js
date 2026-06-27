@@ -165,8 +165,10 @@ class World {
         return false;
     }
 
+    
     handleInteraction(action, target) {
-        if (action === "list" || action === "ls") {
+        // Handle listing the room (ls, dir, look)
+        if (action === "list" || action === "ls" || (action === "examine" && !target)) {
             const room = this.getRoom();
             const items = room.items.map(id => this.items[id].name);
             return items.length > 0 ? items.join("  ") : "Directory is empty.";
@@ -176,7 +178,7 @@ class World {
             const result = this.move(target);
             if (result === true) return this.templates.move_success.replace("{target}", target);
             if (result === "LOCKED_EXIT") return this.templates.move_fail;
-            return this.templates.move_fail.replace("{target}", target);
+            return this.templates.move_fail.replace("{target}", target || "unknown destination");
         }
 
         const item = this.getItem(target);
@@ -212,11 +214,15 @@ class World {
         if (action === "open" && item.properties.openable) {
             return this._doOpen(item);
         }
+        if (action === "examine") {
+            return item.description;
+        }
 
         return this.templates.cant_do.replace("{verb}", action).replace("{item}", item.name);
     }
 
-    _doTake(item) {
+    _doTake(item)
+ {
         const room = this.getRoom();
         let containerId = null;
         for (const iid of room.items) {
