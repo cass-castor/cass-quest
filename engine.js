@@ -141,7 +141,7 @@ class World {
 
         if (action === "move") {
             const result = this.move(target);
-            if (result === true) return this.templates.move_success.replace("{target}", target);
+            if (result === true) return this.templates.move_success.replace("{target}", target) + "\n\n" + this.getRoomDescription();
             if (result === "LOCKED_EXIT") return this.templates.move_fail;
             return this.templates.move_fail.replace("{target}", target || "unknown destination");
         }
