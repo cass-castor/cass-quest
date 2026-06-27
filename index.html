@@ -85,7 +85,7 @@
                 const host = world.state.host || "quest-node";
                 const room = world.getRoom();
                 const path = room ? room.name : "unknown_location";
-                prompt.textContent = `${user}@${host}:${path}$ `;
+                prompt.textContent = `> `;
             }
 
             updatePrompt();
@@ -104,12 +104,12 @@
                         return;
                     }
                     if (cmd.toLowerCase() === 'help') {
-                        print("\nAvailable commands: ls, cd [dir], use [item], take [item], inv, exit\n");
+                        print("\nAvailable commands: look, go [direction], take [item], use [item], inventory, attack [monster], flee, exit\n");
                         return;
                     }
                     if (cmd.toLowerCase() === 'inv') {
                         const inv = world.playerInventory.map(id => world.items[id].name);
-                        print(`Inventory: ${inv.length > 0 ? inv.join(", ") : "Empty."}`);
+                        print(`Your belongings: ${inv.length > 0 ? inv.join(", ") : "You are carrying nothing."}`);
                         return;
                     }
 

@@ -2,22 +2,23 @@
   "start_room": "town_center",
   "vocabulary": {
     "move": [
-      "cd",
-      "go",
-      "walk",
       "north",
       "south",
       "east",
-      "west"
+      "west",
+      "go",
+      "walk",
+      "cd"
     ],
     "examine": [
-      "ls",
       "look",
-      "examine"
+      "examine",
+      "ls",
+      "dir"
     ],
     "read": [
-      "cat",
-      "read"
+      "read",
+      "cat"
     ],
     "use": [
       "use",
@@ -30,7 +31,8 @@
     ],
     "inventory": [
       "inv",
-      "items"
+      "items",
+      "inventory"
     ],
     "attack": [
       "attack",
@@ -45,9 +47,9 @@
   },
   "templates": {
     "room": "\n[{name}]\n{description}",
-    "item_not_found": "You don't see a {target} here.",
+    "item_not_found": "You don't see any {target} here.",
     "cant_do": "You can't {verb} the {item}.",
-    "move_success": "You move to {target}.",
+    "move_success": "You travel to {target}.",
     "move_fail": "You can't go that way.",
     "take_success": "You pick up {item}.",
     "already_have": "You already have {item}.",
