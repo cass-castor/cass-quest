@@ -64,8 +64,8 @@ class World {
         this.startRoomId = scenarioData.start_room;
         this.playerRoomId = this.startRoomId;
         this.playerInventory = [];
-        this.playerGold = this.state.initial_gold || 10;
         this.state = scenarioData.initial_state || {};
+        this.playerGold = this.state.initial_gold || 10;
         this.vocabulary = scenarioData.vocabulary || {};
         this.templates = scenarioData.templates || {
             "room": "[{name}]\n{description}",
