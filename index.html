@@ -4,137 +4,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AetherCorp Terminal</title>
+    <title>Project Aegis | Secure P2P</title>
     <style>
-        body {
-            background-color: #0a0a0a;
-            color: #00ff41;
-            font-family: 'Courier New', Courier, monospace;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            margin: 0;
+        :root {
+            --bg-color: #0a0a0a;
+            --text-color: #00ff41;
+            --accent-color: #008f11;
+            --error-color: #ff5555;
+            --sys-color: #ffcc00;
+            --border-style: 1px solid var(--text-color);
+        }
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--text-color); 
+            font-family: 'Courier New', Courier, monospace; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            margin: 0; 
+            padding: 20px; 
+            box-sizing: border-box; 
+        }
+        h1 { 
+            text-align: center; 
+            text-transform: uppercase; 
+            letter-spacing: 5px; 
+            border-bottom: var(--border-style); 
+            padding-bottom: 10px; 
+        }
+        #setup, #chat { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            width: 100%;
+            display: none; 
+        }
+        #setup.active, #chat.active { display: block; }
+        .panel {
+            border: var(--border-style);
             padding: 20px;
-            box-sizing: border-box;
+            background: #000;
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
         }
-        #terminal {
-            flex-grow: 1;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            margin-bottom: 20px;
+        #messages { 
+            height: 400px; 
+            overflow-y: auto; 
+            border: var(--border-style); 
+            margin-bottom: 20px; 
+            padding: 10px; 
+            background: #050505;
         }
-        #input-line {
+        .controls {
             display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
             align-items: center;
         }
-        #prompt {
-            margin-right: 10px;
-            white-space: nowrap;
-        }
-        #cmd-input {
-            background: transparent;
-            border: none;
-            color: #00ff41;
-            font-family: inherit;
-            font-size: inherit;
+        input, button { 
+            background: #000; 
+            color: var(--text-color); 
+            border: var(--border-style); 
+            padding: 8px; 
+            font-family: inherit; 
             outline: none;
-            width: 100%;
         }
-        .system-msg { color: #ffcc00; }
-        .error-msg { color: #ff5555; }
-        .success-msg { color: #55ff55; }
+        button:hover {
+            background: var(--accent-color);
+            color: #000;
+            cursor: pointer;
+        }
+        .msg { margin-bottom: 8px; line-height: 1.4; word-break: break-all; }
+        .msg.remote { color: #55ff55; }
+        .msg.local { color: var(--text-color); }
+        .msg.sys { color: var(--sys-color); font-style: italic; font-size: 0.9em; }
+        .msg.cipher { color: #444; font-size: 0.8em; }
     </style>
 </head>
 <body>
-    <div id="terminal"></div>
-    <div id="input-line">
-        <span id="prompt">guest@aethercorp:~$ </span>
-        <input type="text" id="cmd-input" autofocus autocomplete="off">
+    <h1>Project Aegis</h1>
+
+    <div id="setup" class="active">
+        <div class="panel">
+            <p>SENSITIVE COMMUNICATION TERMINAL v1.0</p>
+            <p>Please initialize identity to connect to the signaling node.</p>
+            <div class="controls">
+                <label>USER_ID: </label>
+                <input type="text" id="userId" placeholder="Agent Name...">
+                <button id="btnConnect">INITIALIZE</button>
+            </div>
+        </div>
     </div>
 
-    <script src="engine.js?v=20260627095218"></script>
-    <script>
-        async function loadScenario(path) {
-            const response = await fetch(path);
-            return await response.json();
-        }
+    <div id="chat">
+        <div class="panel">
+            <div class="controls">
+                <label>NETWORK_PEERS: </label>
+                <span id="peers">None</span>
+                <button id="btnRefreshPeers">REFRESH</button>
+            </div>
+            <div class="controls">
+                <label>TARGET_ID: </label>
+                <input type="text" id="peerId" placeholder="Remote ID...">
+                <button id="btnCall">ESTABLISH LINK</button>
+            </div>
+            <div id="messages"></div>
+            <div class="controls">
+                <input type="text" id="msgInput" style="flex-grow: 1" placeholder="Enter encrypted message...">
+                <button id="btnSend">SEND</button>
+            </div>
+        </div>
+    </div>
 
-        const terminal = document.getElementById('terminal');
-        const input = document.getElementById('cmd-input');
-        const prompt = document.getElementById('prompt');
-
-        function print(text, className = "") {
-            const div = document.createElement('div');
-            div.className = className;
-            div.textContent = text;
-            terminal.appendChild(div);
-            terminal.scrollTop = terminal.scrollHeight;
-        }
-
-        async function start() {
-            print("======================================================", "system-msg");
-            print("        AETHERCORP TERMINAL v4.2.0 - SECURE ACCESS     ", "system-msg");
-            print("======================================================", "system-msg");
-            print("Type 'help' for commands or 'exit' to quit.\n");
-
-            const scenarioData = await loadScenario('scenarios/runescape_lite.json');
-            const world = new World(scenarioData);
-
-            function updatePrompt() {
-                const user = world.state.user || "guest";
-                const host = world.state.host || "aethercorp-gateway";
-                const path = world.getRoom().name;
-                prompt.textContent = `${user}@${host}:${path}$ `;
-            }
-
-            updatePrompt();
-            print(world.getRoomDescription());
-
-            input.addEventListener('keydown', async (e) => {
-                if (e.key === 'Enter') {
-                    const cmd = input.value;
-                    input.value = '';
-                    
-                    print(`${prompt.textContent} ${cmd}`);
-                    
-                    if (cmd.toLowerCase() === 'exit') {
-                        print("Closing connection...");
-                        input.disabled = true;
-                        return;
-                    }
-                    if (cmd.toLowerCase() === 'help') {
-                        print("\nAvailable commands: ls, cd [dir], cat [file], use [item], get [item], inv, exit\n");
-                        return;
-                    }
-                    if (cmd.toLowerCase() === 'inv') {
-                        const inv = world.playerInventory.map(id => world.items[id].name);
-                        print(`Local files: ${inv.length > 0 ? inv.join(", ") : "No files downloaded."}`);
-                        return;
-                    }
-
-                    const { action, target } = world.parser.parse(cmd);
-                    if (action) {
-                        // Special trigger for syslog
-                        
-                        
-                        const result = world.handleInteraction(action, target);
-                        print(result);
-                        
-                        if (world.state.singularity_stolen) {
-                            print("\n*** SYSTEM CRITICAL ERROR: DATA BREACH DETECTED ***", "error-msg");
-                            print("You've achieved your objective. Disconnecting now to avoid trace...", "error-msg");
-                            input.disabled = true;
-                        }
-                    } else {
-                        print(`bash: ${cmd.split(' ')[0]}: command not found`, "error-msg");
-                    }
-                    
-                    updatePrompt();
-                }
-            });
-        }
-
-        start();
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/libsodium-wrappers@0.7.13/dist/sodium.js"></script>
+    <script src="engine.js"></script>
+<script src="crypto.js"></script>
+    <script src="client.js"></script>
 </body>
 </html>
