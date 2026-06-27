@@ -1,0 +1,205 @@
+{
+  "start_room": "home_guest",
+  "vocabulary": {
+    "move": [
+      "cd",
+      "ssh",
+      "go"
+    ],
+    "examine": [
+      "ls",
+      "dir",
+      "look"
+    ],
+    "read": [
+      "cat",
+      "type",
+      "read"
+    ],
+    "use": [
+      "use",
+      "run",
+      "exec"
+    ],
+    "take": [
+      "get",
+      "download",
+      "cp"
+    ],
+    "inventory": [
+      "inv",
+      "files"
+    ]
+  },
+  "templates": {
+    "room": "\n{user}@{host}:{room_path}$\n{description}",
+    "item_not_found": "bash: {target}: No such file or directory",
+    "cant_do": "bash: {verb}: command not found",
+    "move_success": "Connecting to {target}...",
+    "move_fail": "Connection refused: Access Denied.",
+    "take_success": "Downloading {item}... [100%]",
+    "already_have": "File {item} is already in local storage.",
+    "open_success": "Opening {item}...",
+    "inside_view": "Contents:",
+    "container_closed": "Permission denied: {name} is encrypted/locked.",
+    "already_open": "The file {item} is already open."
+  },
+  "initial_state": {
+    "user": "guest",
+    "host": "aethercorp-gateway",
+    "firewall_down": false,
+    "admin_pass_known": false,
+    "root_access": false,
+    "singularity_stolen": false
+  },
+  "rooms": {
+    "home_guest": {
+      "name": "/home/guest",
+      "description": "Guest home directory. A restricted environment. You see 'welcome.txt'.",
+      "exits": {
+        "tmp": "tmp_dir",
+        "ssh": {
+          "dest": "server_main",
+          "condition": [
+            "firewall_down",
+            true
+          ]
+        }
+      },
+      "items": [
+        "welcome_txt"
+      ]
+    },
+    "tmp_dir": {
+      "name": "/tmp",
+      "description": "Temporary directory. There is a suspicious script here: 'exploit.sh'.",
+      "exits": {
+        "..": "home_guest"
+      },
+      "items": [
+        "exploit_sh"
+      ]
+    },
+    "server_main": {
+      "name": "main_server",
+      "description": "AetherCorp Internal Server. You have limited access. You see 'syslog' and 'admin_portal'.",
+      "exits": {
+        "..": "home_guest",
+        "login": {
+          "dest": "home_admin",
+          "condition": [
+            "admin_pass_known",
+            true
+          ]
+        }
+      },
+      "items": [
+        "syslog",
+        "admin_portal_sh"
+      ]
+    },
+    "home_admin": {
+      "name": "/home/admin",
+      "description": "Administrator home directory. You see 'root_access.key'.",
+      "exits": {
+        "..": "server_main",
+        "sudo": {
+          "dest": "root_core",
+          "condition": [
+            "root_access",
+            true
+          ]
+        }
+      },
+      "items": [
+        "root_key"
+      ]
+    },
+    "root_core": {
+      "name": "ROOT_CORE",
+      "description": "The heart of the mainframe. The 'singularity_code.zip' is right here.",
+      "exits": {
+        "..": "home_admin"
+      },
+      "items": [
+        "singularity_code"
+      ]
+    }
+  },
+  "items": {
+    "welcome_txt": {
+      "id": "welcome_txt",
+      "name": "welcome.txt",
+      "description": "A generic welcome file. It mentions: 'System maintenance is ongoing. The firewall may be unstable.'",
+      "interactions": {
+        "read": "The file says: 'Welcome to AetherCorp. Remember, all activity is logged. If you find a bug in /tmp, please report it.'"
+      }
+    },
+    "exploit_sh": {
+      "id": "exploit_sh",
+      "name": "exploit.sh",
+      "description": "A shell script that looks like a buffer overflow exploit.",
+      "interactions": {
+        "use": {
+          "effect": {
+            "firewall_down": true
+          },
+          "response": "Executing exploit... \n[+] Buffer overflow successful.\n[+] Firewall disabled. You can now SSH into the main server."
+        }
+      }
+    },
+    "syslog": {
+      "id": "syslog",
+      "name": "syslog",
+      "description": "The system log file.",
+      "interactions": {
+        "read": "Scanning logs... \n[INFO] Admin logged in from 10.0.0.5\n[DEBUG] Session key: 'S3cur3P@ss!'\n[INFO] Connection closed."
+      }
+    },
+    "admin_portal_sh": {
+      "id": "admin_portal_sh",
+      "name": "admin_portal.sh",
+      "description": "A portal script for admin login.",
+      "interactions": {
+        "read": "It asks for a password. You need to find it in the logs first.",
+        "use": {
+          "condition": [
+            "admin_pass_known",
+            true
+          ],
+          "effect": {
+            "user": "admin",
+            "host": "aethercorp-main"
+          },
+          "response": "Password accepted. Access granted to Administrator account."
+        }
+      }
+    },
+    "root_key": {
+      "id": "root_key",
+      "name": "root_access.key",
+      "description": "A cryptographic key that grants root access.",
+      "interactions": {
+        "use": {
+          "effect": {
+            "root_access": true
+          },
+          "response": "Key accepted. You have escalated your privileges to ROOT."
+        }
+      }
+    },
+    "singularity_code": {
+      "id": "singularity_code",
+      "name": "singularity_code.zip",
+      "description": "The source code for Project Singularity.",
+      "interactions": {
+        "take": {
+          "effect": {
+            "singularity_stolen": true
+          },
+          "response": "Downloading singularity_code.zip... [100%]\n\nCONGRATULATIONS: You have stolen the Project Singularity source code. You have won the game!"
+        }
+      }
+    }
+  }
+}
