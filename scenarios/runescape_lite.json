@@ -61,6 +61,171 @@
     "woodcutting": 1,
     "combat_xp": 0
   },
-  "rooms": {},
-  "items": {}
+  "rooms": {
+    "town_center": {
+      "id": "town_center",
+      "name": "Town Center",
+      "description": "The heart of the village. People are milling about. To the North is the Mine, to the East is the Forest.",
+      "exits": {
+        "north": "mine_entrance",
+        "east": "forest_edge"
+      },
+      "items": []
+    },
+    "mine_entrance": {
+      "id": "mine_entrance",
+      "name": "Mine Entrance",
+      "description": "A dark hole in the ground. You can smell sulfur. To the South is the Town Center.",
+      "exits": {
+        "south": "town_center",
+        "inside": "mine_deep"
+      },
+      "items": [
+        "copper_rock"
+      ]
+    },
+    "mine_deep": {
+      "id": "mine_deep",
+      "name": "Deep Mine",
+      "description": "Deep underground. It's cold and damp. There's a copper vein here. To the North is a Goblin cave.",
+      "exits": {
+        "out": "mine_entrance",
+        "north": "goblin_cave"
+      },
+      "items": [
+        "copper_rock"
+      ]
+    },
+    "goblin_cave": {
+      "id": "goblin_cave",
+      "name": "Goblin Cave",
+      "description": "A smelly cave inhabited by goblins. To the South is the Deep Mine.",
+      "exits": {
+        "south": "mine_deep"
+      },
+      "items": [
+        "goblin_grunt"
+      ]
+    },
+    "forest_edge": {
+      "id": "forest_edge",
+      "name": "Forest Edge",
+      "description": "The edge of a lush forest. Towering oaks stand before you. To the West is the Town Center.",
+      "exits": {
+        "west": "town_center",
+        "inside": "forest_deep"
+      },
+      "items": [
+        "oak_tree"
+      ]
+    },
+    "forest_deep": {
+      "id": "forest_deep",
+      "name": "Deep Forest",
+      "description": "Dense foliage blocks most of the light. You see an ancient oak. To the South is the Forest Edge.",
+      "exits": {
+        "south": "forest_edge"
+      },
+      "items": [
+        "oak_tree",
+        "forest_spider"
+      ]
+    }
+  },
+  "items": {
+    "copper_rock": {
+      "id": "copper_rock",
+      "name": "Copper Rock",
+      "description": "A chunk of copper ore embedded in the wall.",
+      "properties": {
+        "portable": false
+      },
+      "interactions": {
+        "mine": {
+          "condition": [
+            "mining",
+            1
+          ],
+          "effect": {
+            "mining": "+1",
+            "inventory_item": "copper_ore"
+          },
+          "response": "You swing your pickaxe and mine some copper ore!"
+        }
+      }
+    },
+    "copper_ore": {
+      "id": "copper_ore",
+      "name": "Copper Ore",
+      "description": "A piece of raw copper ore.",
+      "properties": {
+        "portable": true
+      },
+      "interactions": {}
+    },
+    "oak_tree": {
+      "id": "oak_tree",
+      "name": "Oak Tree",
+      "description": "A sturdy oak tree with thick bark.",
+      "properties": {
+        "portable": false
+      },
+      "interactions": {
+        "chop": {
+          "condition": [
+            "woodcutting",
+            1
+          ],
+          "effect": {
+            "woodcutting": "+1",
+            "inventory_item": "oak_log"
+          },
+          "response": "You chop down some oak wood!"
+        }
+      }
+    },
+    "oak_log": {
+      "id": "oak_log",
+      "name": "Oak Log",
+      "description": "A heavy log of oak wood.",
+      "properties": {
+        "portable": true
+      },
+      "interactions": {}
+    },
+    "goblin_grunt": {
+      "id": "goblin_grunt",
+      "name": "Goblin Grunt",
+      "description": "A small, green, angry creature with a rusty knife.",
+      "properties": {
+        "portable": false,
+        "hp": 20,
+        "strength": 2,
+        "xp": 50
+      },
+      "interactions": {
+        "attack": {
+          "start_combat": true,
+          "response": "You engage the goblin in combat!"
+        }
+      }
+    },
+    "forest_spider": {
+      "id": "forest_spider",
+      "name": "Forest Spider",
+      "description": "A giant, hairy spider with multiple glistening eyes.",
+      "properties": {
+        "portable": false,
+        "hp": 15,
+        "strength": 3,
+        "xp": 30
+      },
+      "interactions": {
+        "attack": {
+          "start_combat": true,
+          "response": "You face the giant spider!"
+        }
+      }
+    }
+  }
 }
