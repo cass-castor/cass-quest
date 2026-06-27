@@ -166,6 +166,12 @@ class World {
     }
 
     handleInteraction(action, target) {
+        if (action === "list" || action === "ls") {
+            const room = this.getRoom();
+            const items = room.items.map(id => this.items[id].name);
+            return items.length > 0 ? items.join("  ") : "Directory is empty.";
+        }
+
         if (action === "move") {
             const result = this.move(target);
             if (result === true) return this.templates.move_success.replace("{target}", target);
@@ -175,7 +181,7 @@ class World {
 
         const item = this.getItem(target);
         if (!item) {
-            return this.templates.item_not_found.replace("{target}", target);
+            return this.templates.item_not_found.replace("{target}", target || "nothing");
         }
 
         if (action in item.interactions) {
