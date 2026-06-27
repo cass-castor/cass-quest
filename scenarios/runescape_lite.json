@@ -44,6 +44,12 @@
       "flee",
       "run",
       "escape"
+    ],
+    "trade": [
+      "trade",
+      "buy",
+      "sell",
+      "swap"
     ]
   },
   "templates": {
@@ -63,7 +69,8 @@
     "mining": 1,
     "woodcutting": 1,
     "combat_xp": 0,
-    "hunger": 0
+    "hunger": 0,
+    "initial_gold": 10
   },
   "rooms": {
     "town_center": {
@@ -248,6 +255,55 @@
           "response": "You eat the apple. It's delicious!"
         }
       }
+    },
+    "gold_coin": {
+      "id": "gold_coin",
+      "name": "Gold Coin",
+      "description": "A shiny gold coin.",
+      "properties": {
+        "portable": true
+      },
+      "interactions": {}
+    }
+  },
+  "npcs": {
+    "villager_1": {
+      "name": "Old Man Jenkins",
+      "start_room": "town_center",
+      "initial_inventory": [
+        "copper_ore"
+      ],
+      "initial_gold": 50,
+      "initial_state": {
+        "hunger": 0,
+        "mood": "grumpy"
+      },
+      "id": "villager_1"
+    },
+    "villager_2": {
+      "name": "Young Timmy",
+      "start_room": "town_center",
+      "initial_inventory": [
+        "oak_log"
+      ],
+      "initial_gold": 10,
+      "initial_state": {
+        "hunger": 0,
+        "mood": "energetic"
+      },
+      "id": "villager_2"
+    },
+    "goblin_scout": {
+      "name": "Goblin Scout",
+      "start_room": "goblin_cave",
+      "initial_inventory": [
+        "copper_ore"
+      ],
+      "initial_gold": 5,
+      "initial_state": {
+        "aggression": 10
+      },
+      "id": "goblin_scout"
     }
   }
 }
